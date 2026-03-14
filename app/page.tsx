@@ -5,6 +5,9 @@ import { FactCheckForm } from "@/components/FactCheckForm";
 import { VerdictCard } from "@/components/VerdictCard";
 import { EvidenceList } from "@/components/EvidenceList";
 import { ClaimTimeline } from "@/components/ClaimTimeline";
+import { AuthorCard } from "@/components/AuthorCard";
+import { DomainCard } from "@/components/DomainCard";
+import { TrackerCard } from "@/components/TrackerCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
@@ -15,22 +18,30 @@ export default function Home() {
     claims,
     verdict,
     error,
+    authorInfo,
+    domainAnalysis,
+    trackerAnalysis,
     submit,
   } = useFactCheck();
 
-  const hasResults = isLoading || claims.length > 0 || verdict || error;
+  const hasResults =
+    isLoading ||
+    claims.length > 0 ||
+    verdict ||
+    error ||
+    domainAnalysis ||
+    authorInfo ||
+    trackerAnalysis;
 
   return (
     <main className="min-h-screen">
       {/* Hero */}
       <div className="border-b border-[var(--border)] bg-[var(--muted)]">
         <div className="max-w-3xl mx-auto px-4 py-12 text-center">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            FactCheck
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">FactCheck</h1>
           <p className="text-[var(--muted-foreground)] text-sm max-w-lg mx-auto">
-            AI-powered fact checking. Verify claims, articles, and images using
-            multiple sources and advanced analysis.
+            AI-powered fact checking. Verify claims, articles, images, and PDFs
+            using multiple sources and advanced analysis.
           </p>
         </div>
       </div>
@@ -62,6 +73,20 @@ export default function Home() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Source Analysis Cards (Domain, Author, Trackers) */}
+          {(domainAnalysis || authorInfo || trackerAnalysis) && (
+            <div className="mb-6 space-y-3">
+              <h3 className="text-sm font-medium text-[var(--muted-foreground)]">
+                Source Analysis
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {domainAnalysis && <DomainCard domain={domainAnalysis} />}
+                {authorInfo && <AuthorCard author={authorInfo} />}
+              </div>
+              {trackerAnalysis && <TrackerCard trackers={trackerAnalysis} />}
             </div>
           )}
 

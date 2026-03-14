@@ -3,6 +3,9 @@ import { extractClaims, synthesizeVerdict } from "@/lib/anthropic";
 import { scrapeUrl } from "@/lib/firecrawl";
 import { searchClaim } from "@/lib/tavily";
 import { searchFactChecks } from "@/lib/google-factcheck";
+import { verifyAuthor } from "@/lib/author";
+import { analyzeDomain } from "@/lib/domain-authority";
+import { analyzeTrackers } from "@/lib/tracker-analysis";
 import { Evidence, StreamEvent } from "@/lib/types";
 
 export async function POST(req: Request) {
@@ -21,7 +24,7 @@ export async function POST(req: Request) {
   return createSSEStream(async function* (): AsyncGenerator<StreamEvent> {
     yield { type: "progress", step: "Scraping article..." };
 
-    const { markdown, title } = await scrapeUrl(url);
+    const { markdown, title, author, rawHtml } = await scrapeUrl(url);
 
     if (!markdown) {
       yield { type: "error", message: "Could not extract content from URL." };
@@ -30,11 +33,32 @@ export async function POST(req: Request) {
 
     yield {
       type: "progress",
-      step: "Extracting claims...",
+      step: "Analyzing source...",
       detail: title || undefined,
     };
 
-    const claims = await extractClaims(markdown);
+    // Run domain analysis, author verification, tracker analysis, and claim extraction in parallel
+    const [domainResult, authorResult, claims] = await Promise.all([
+      analyzeDomain(url).catch(() => null),
+      verifyAuthor(author, title || "general news").catch(() => null),
+      extractClaims(markdown),
+    ]);
+
+    // Tracker analysis is synchronous
+    const trackerResult = rawHtml ? analyzeTrackers(rawHtml) : null;
+
+    // Yield domain, author, and tracker events
+    if (domainResult) {
+      yield { type: "domain", data: domainResult };
+    }
+
+    if (authorResult) {
+      yield { type: "author", data: authorResult };
+    }
+
+    if (trackerResult) {
+      yield { type: "trackers", data: trackerResult };
+    }
 
     if (claims.length === 0) {
       yield {
@@ -66,6 +90,50 @@ export async function POST(req: Request) {
     );
 
     const evidenceList: Evidence[] = [];
+
+    // Prepend domain/author/tracker context as evidence entries
+    if (domainResult) {
+      evidenceList.push({
+        claim: "Source domain credibility assessment",
+        searchResults: [
+          {
+            title: `Domain: ${domainResult.domain}`,
+            url,
+            snippet: `Trust level: ${domainResult.overallTrustLevel}. Authority score: ${domainResult.authorityScore}/100. ${domainResult.trustIndicators.join(", ")}`,
+          },
+        ],
+        factCheckResults: [],
+      });
+    }
+
+    if (authorResult) {
+      evidenceList.push({
+        claim: "Author credibility assessment",
+        searchResults: [
+          {
+            title: `Author: ${authorResult.name ?? "Unknown"}`,
+            url: "",
+            snippet: `Credibility: ${authorResult.credibilityScore}/100. ${authorResult.credibilityAssessment}`,
+          },
+        ],
+        factCheckResults: [],
+      });
+    }
+
+    if (trackerResult && trackerResult.totalTrackers > 0) {
+      evidenceList.push({
+        claim: "Source website tracker/ad analysis",
+        searchResults: [
+          {
+            title: "Tracker Analysis",
+            url,
+            snippet: trackerResult.summary,
+          },
+        ],
+        factCheckResults: [],
+      });
+    }
+
     for (let i = 0; i < evidenceResults.length; i++) {
       const { claim, tavilyResults, factChecks } = evidenceResults[i];
 

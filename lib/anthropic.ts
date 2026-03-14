@@ -1,5 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Evidence, ImageAnalysis, Verdict, VerdictSchema } from "./types";
+import {
+  AuthorInfo,
+  Evidence,
+  EvidenceResult,
+  ImageAnalysis,
+  Verdict,
+  VerdictSchema,
+} from "./types";
 
 function getClient() {
   return new Anthropic();
@@ -131,6 +138,67 @@ export async function webSearchFactCheck(
   }
 
   return { text, citations };
+}
+
+export async function assessAuthorCredibility(
+  authorName: string,
+  searchResults: EvidenceResult[],
+  articleTopic: string
+): Promise<AuthorInfo> {
+  const searchContext = searchResults
+    .map((r) => `- ${r.title}: ${r.snippet} (${r.url})`)
+    .join("\n");
+
+  const response = await getClient().messages.create({
+    model: "claude-sonnet-4-5-20250514",
+    max_tokens: 2048,
+    messages: [
+      {
+        role: "user",
+        content: `Assess the credibility of the author "${authorName}" for writing about "${articleTopic}".
+
+Based on these search results about the author:
+${searchContext || "No search results found."}
+
+Return a JSON object with:
+- isVerified (boolean): whether the author appears to be a real, credentialed person
+- credentials (string[]): known credentials, degrees, positions
+- affiliations (string[]): known organizations, publications they work for
+- credibilityAssessment (string): brief assessment of their expertise and reliability
+- credibilityScore (number 0-100): overall credibility score
+
+Return ONLY the JSON object.`,
+      },
+    ],
+  });
+
+  const content = response.content[0];
+  if (content.type !== "text") {
+    return {
+      name: authorName,
+      isVerified: false,
+      credentials: [],
+      affiliations: [],
+      credibilityAssessment: "Unable to assess author credibility.",
+      credibilityScore: 30,
+    };
+  }
+
+  try {
+    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON found");
+    const parsed = JSON.parse(jsonMatch[0]);
+    return { name: authorName, ...parsed };
+  } catch {
+    return {
+      name: authorName,
+      isVerified: false,
+      credentials: [],
+      affiliations: [],
+      credibilityAssessment: "Unable to parse author credibility assessment.",
+      credibilityScore: 30,
+    };
+  }
 }
 
 const VERDICT_SYSTEM_PROMPT = `You are an expert fact-checker. You will be given a set of claims with evidence gathered from multiple sources. Your job is to evaluate each claim, assess the evidence, and deliver a structured verdict.

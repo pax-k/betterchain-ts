@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { Verdict, StreamEvent } from "@/lib/types";
+import type {
+  Verdict,
+  StreamEvent,
+  AuthorInfo,
+  DomainAnalysis,
+  TrackerAnalysis,
+} from "@/lib/types";
 
-type FactCheckMode = "url" | "image" | "text";
+type FactCheckMode = "url" | "image" | "text" | "pdf";
 
 type ClaimInfo = {
   text: string;
@@ -18,6 +24,11 @@ export function useFactCheck() {
   const [claims, setClaims] = useState<ClaimInfo[]>([]);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authorInfo, setAuthorInfo] = useState<AuthorInfo | null>(null);
+  const [domainAnalysis, setDomainAnalysis] =
+    useState<DomainAnalysis | null>(null);
+  const [trackerAnalysis, setTrackerAnalysis] =
+    useState<TrackerAnalysis | null>(null);
 
   const reset = useCallback(() => {
     setIsLoading(false);
@@ -26,6 +37,9 @@ export function useFactCheck() {
     setClaims([]);
     setVerdict(null);
     setError(null);
+    setAuthorInfo(null);
+    setDomainAnalysis(null);
+    setTrackerAnalysis(null);
   }, []);
 
   const submit = useCallback(
@@ -36,6 +50,9 @@ export function useFactCheck() {
       setClaims([]);
       setProgress("");
       setProgressDetail("");
+      setAuthorInfo(null);
+      setDomainAnalysis(null);
+      setTrackerAnalysis(null);
 
       try {
         const response = await fetch(`/api/check-${mode}`, {
@@ -106,6 +123,15 @@ export function useFactCheck() {
                 case "error":
                   setError(event.message);
                   break;
+                case "author":
+                  setAuthorInfo(event.data);
+                  break;
+                case "domain":
+                  setDomainAnalysis(event.data);
+                  break;
+                case "trackers":
+                  setTrackerAnalysis(event.data);
+                  break;
               }
             } catch {
               // Skip malformed JSON lines
@@ -128,6 +154,9 @@ export function useFactCheck() {
     claims,
     verdict,
     error,
+    authorInfo,
+    domainAnalysis,
+    trackerAnalysis,
     submit,
     reset,
   };
