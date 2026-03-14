@@ -17,6 +17,22 @@ type ClaimInfo = {
   evidenceSources: string[];
 };
 
+function extractInput(
+  mode: FactCheckMode,
+  payload: Record<string, unknown>
+): string {
+  switch (mode) {
+    case "text":
+      return (payload.text as string) ?? "";
+    case "url":
+      return (payload.url as string) ?? "";
+    case "image":
+      return (payload.imageUrl as string) ?? "";
+    case "pdf":
+      return (payload.pdfUrl as string) ?? "";
+  }
+}
+
 export function useFactCheck() {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState("");
@@ -53,6 +69,12 @@ export function useFactCheck() {
       setAuthorInfo(null);
       setDomainAnalysis(null);
       setTrackerAnalysis(null);
+
+      // Local accumulators for auto-save (state setters are async)
+      let receivedVerdict: Verdict | null = null;
+      let receivedAuthor: AuthorInfo | null = null;
+      let receivedDomain: DomainAnalysis | null = null;
+      let receivedTrackers: TrackerAnalysis | null = null;
 
       try {
         const response = await fetch(`/api/check-${mode}`, {
@@ -118,18 +140,22 @@ export function useFactCheck() {
                   );
                   break;
                 case "verdict":
+                  receivedVerdict = event.data;
                   setVerdict(event.data);
                   break;
                 case "error":
                   setError(event.message);
                   break;
                 case "author":
+                  receivedAuthor = event.data;
                   setAuthorInfo(event.data);
                   break;
                 case "domain":
+                  receivedDomain = event.data;
                   setDomainAnalysis(event.data);
                   break;
                 case "trackers":
+                  receivedTrackers = event.data;
                   setTrackerAnalysis(event.data);
                   break;
               }
@@ -137,6 +163,22 @@ export function useFactCheck() {
               // Skip malformed JSON lines
             }
           }
+        }
+
+        // Auto-save result to history (fire-and-forget)
+        if (receivedVerdict) {
+          fetch("/api/fact-check-db", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode,
+              input: extractInput(mode, payload),
+              verdict: receivedVerdict,
+              authorInfo: receivedAuthor,
+              domainAnalysis: receivedDomain,
+              trackerAnalysis: receivedTrackers,
+            }),
+          }).catch(() => {});
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error occurred");

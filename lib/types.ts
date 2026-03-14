@@ -114,6 +114,27 @@ export const VerdictSchema = z.object({
   sources: z.array(SourceSchema),
 });
 
+// --- Stored Fact-Check Types ---
+
+export type StoredFactCheck = {
+  id: string;
+  mode: "url" | "image" | "text" | "pdf";
+  input: string;
+  verdict: Verdict;
+  authorInfo?: AuthorInfo | null;
+  domainAnalysis?: DomainAnalysis | null;
+  trackerAnalysis?: TrackerAnalysis | null;
+  createdAt: string;
+  viewCount: number;
+};
+
+export type HistoryResponse = {
+  results: StoredFactCheck[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 // --- Stream Event Types ---
 
 export type StreamEvent =
