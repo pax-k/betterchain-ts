@@ -75,6 +75,34 @@ export type DomainAnalysis = {
   overallTrustLevel: "high" | "medium" | "low" | "unknown";
 };
 
+// --- Image History Types ---
+
+export type ImageHistory = {
+  firstSeen: string | null;
+  totalResults: number;
+  matches: {
+    url: string;
+    domain: string;
+    crawlDate: string | null;
+  }[];
+};
+
+// --- AI Text Detection Types ---
+
+export type AITextDetection = {
+  isLikelyAIGenerated: boolean;
+  confidence: number;
+  indicators: string[];
+  summary: string;
+};
+
+// --- Multi-Perspective Types ---
+
+export type PerspectiveGroup = {
+  leaning: "left" | "center" | "right" | "unknown";
+  sources: { title: string; url: string; snippet: string; domain: string }[];
+};
+
 // --- Tracker Analysis Types ---
 
 export type TrackerAnalysis = {
@@ -124,6 +152,9 @@ export type StoredFactCheck = {
   authorInfo?: AuthorInfo | null;
   domainAnalysis?: DomainAnalysis | null;
   trackerAnalysis?: TrackerAnalysis | null;
+  imageHistory?: ImageHistory | null;
+  aiTextDetection?: AITextDetection | null;
+  perspectives?: PerspectiveGroup[] | null;
   createdAt: string;
   viewCount: number;
 };
@@ -146,4 +177,7 @@ export type StreamEvent =
   | { type: "error"; message: string }
   | { type: "author"; data: AuthorInfo }
   | { type: "domain"; data: DomainAnalysis }
-  | { type: "trackers"; data: TrackerAnalysis };
+  | { type: "trackers"; data: TrackerAnalysis }
+  | { type: "imageHistory"; data: ImageHistory }
+  | { type: "aiTextDetection"; data: AITextDetection }
+  | { type: "perspectives"; data: PerspectiveGroup[] };

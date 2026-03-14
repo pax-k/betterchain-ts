@@ -8,6 +8,9 @@ import { ClaimTimeline } from "@/components/ClaimTimeline";
 import { AuthorCard } from "@/components/AuthorCard";
 import { DomainCard } from "@/components/DomainCard";
 import { TrackerCard } from "@/components/TrackerCard";
+import { ImageHistoryCard } from "@/components/ImageHistoryCard";
+import { AITextDetectionCard } from "@/components/AITextDetectionCard";
+import { PerspectiveCard } from "@/components/PerspectiveCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
@@ -21,6 +24,9 @@ export default function Home() {
     authorInfo,
     domainAnalysis,
     trackerAnalysis,
+    imageHistory,
+    aiTextDetection,
+    perspectives,
     submit,
   } = useFactCheck();
 
@@ -31,7 +37,10 @@ export default function Home() {
     error ||
     domainAnalysis ||
     authorInfo ||
-    trackerAnalysis;
+    trackerAnalysis ||
+    imageHistory ||
+    aiTextDetection ||
+    perspectives;
 
   return (
     <main className="min-h-screen">
@@ -76,8 +85,12 @@ export default function Home() {
             </div>
           )}
 
-          {/* Source Analysis Cards (Domain, Author, Trackers) */}
-          {(domainAnalysis || authorInfo || trackerAnalysis) && (
+          {/* Source Analysis Cards */}
+          {(domainAnalysis ||
+            authorInfo ||
+            trackerAnalysis ||
+            imageHistory ||
+            aiTextDetection) && (
             <div className="mb-6 space-y-3">
               <h3 className="text-sm font-medium text-[var(--muted-foreground)]">
                 Source Analysis
@@ -85,8 +98,19 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {domainAnalysis && <DomainCard domain={domainAnalysis} />}
                 {authorInfo && <AuthorCard author={authorInfo} />}
+                {imageHistory && <ImageHistoryCard history={imageHistory} />}
+                {aiTextDetection && (
+                  <AITextDetectionCard detection={aiTextDetection} />
+                )}
               </div>
               {trackerAnalysis && <TrackerCard trackers={trackerAnalysis} />}
+            </div>
+          )}
+
+          {/* Multi-Perspective View */}
+          {perspectives && perspectives.length > 0 && (
+            <div className="mb-6">
+              <PerspectiveCard perspectives={perspectives} />
             </div>
           )}
 

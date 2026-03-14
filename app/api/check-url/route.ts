@@ -1,12 +1,16 @@
 import { createSSEStream } from "@/lib/stream";
-import { extractClaims, synthesizeVerdict } from "@/lib/anthropic";
+import {
+  extractClaims,
+  groupByPerspective,
+  synthesizeVerdict,
+} from "@/lib/anthropic";
 import { scrapeUrl } from "@/lib/firecrawl";
 import { searchClaim } from "@/lib/tavily";
 import { searchFactChecks } from "@/lib/google-factcheck";
 import { verifyAuthor } from "@/lib/author";
-import { analyzeDomain } from "@/lib/domain-authority";
+import { analyzeDomain, getDomainLeanings } from "@/lib/domain-authority";
 import { analyzeTrackers } from "@/lib/tracker-analysis";
-import { Evidence, StreamEvent } from "@/lib/types";
+import { Evidence, EvidenceResult, StreamEvent } from "@/lib/types";
 
 export async function POST(req: Request) {
   const { url } = await req.json();
@@ -149,6 +153,18 @@ export async function POST(req: Request) {
         searchResults: tavilyResults,
         factCheckResults: factChecks,
       });
+    }
+
+    // Group evidence by political perspective
+    const allSearchResults: EvidenceResult[] = evidenceList.flatMap(
+      (e) => e.searchResults
+    );
+    const perspectives = groupByPerspective(
+      allSearchResults,
+      getDomainLeanings()
+    );
+    if (perspectives.some((p) => p.sources.length > 0)) {
+      yield { type: "perspectives", data: perspectives };
     }
 
     yield { type: "progress", step: "Synthesizing verdict..." };

@@ -1,9 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
+  AITextDetection,
   AuthorInfo,
   Evidence,
   EvidenceResult,
   ImageAnalysis,
+  PerspectiveGroup,
   Verdict,
   VerdictSchema,
 } from "./types";
@@ -199,6 +201,123 @@ Return ONLY the JSON object.`,
       credibilityScore: 30,
     };
   }
+}
+
+export async function detectAIText(
+  text: string
+): Promise<AITextDetection> {
+  const sample = text.slice(0, 3000);
+  const response = await getClient().messages.create({
+    model: "claude-sonnet-4-5-20250514",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `Analyze this text for signs of AI generation. Consider:
+- Repetitive sentence structures or overly uniform paragraph lengths
+- Unusual hedging language ("It's important to note", "It's worth mentioning")
+- Lack of personal voice, anecdotes, or specific expertise
+- Overly balanced "on one hand / on the other hand" structures
+- Generic transitions and filler phrases
+- Unusually consistent tone without natural variation
+- Excessive use of bullet points or numbered lists in prose
+
+Text to analyze:
+"""
+${sample}
+"""
+
+Return a JSON object:
+{
+  "isLikelyAIGenerated": boolean,
+  "confidence": number (0-100),
+  "indicators": string[] (specific signs found),
+  "summary": string (brief assessment)
+}
+
+Return ONLY the JSON object.`,
+      },
+    ],
+  });
+
+  const content = response.content[0];
+  if (content.type !== "text") {
+    return {
+      isLikelyAIGenerated: false,
+      confidence: 0,
+      indicators: [],
+      summary: "Unable to analyze text.",
+    };
+  }
+
+  try {
+    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+    return jsonMatch
+      ? JSON.parse(jsonMatch[0])
+      : { isLikelyAIGenerated: false, confidence: 0, indicators: [], summary: "Unable to parse." };
+  } catch {
+    return {
+      isLikelyAIGenerated: false,
+      confidence: 0,
+      indicators: [],
+      summary: "Unable to parse analysis.",
+    };
+  }
+}
+
+export function groupByPerspective(
+  searchResults: EvidenceResult[],
+  domainLeanings: Record<string, string>
+): PerspectiveGroup[] {
+  const groups: Record<string, PerspectiveGroup["sources"]> = {
+    left: [],
+    center: [],
+    right: [],
+    unknown: [],
+  };
+
+  for (const result of searchResults) {
+    let domain = "";
+    try {
+      domain = new URL(result.url).hostname.replace(/^www\./, "");
+    } catch {
+      continue;
+    }
+
+    const bias = domainLeanings[domain] ?? "unknown";
+    let leaning: PerspectiveGroup["leaning"] = "unknown";
+
+    if (
+      bias === "left" ||
+      bias === "left-center" ||
+      bias === "far-left"
+    ) {
+      leaning = "left";
+    } else if (
+      bias === "center" ||
+      bias === "least-biased" ||
+      bias === "pro-science"
+    ) {
+      leaning = "center";
+    } else if (
+      bias === "right" ||
+      bias === "right-center" ||
+      bias === "far-right"
+    ) {
+      leaning = "right";
+    }
+
+    groups[leaning].push({
+      title: result.title,
+      url: result.url,
+      snippet: result.snippet,
+      domain,
+    });
+  }
+
+  return (["left", "center", "right", "unknown"] as const)
+    .filter((l) => groups[l].length > 0)
+    .map((l) => ({ leaning: l, sources: groups[l] }));
 }
 
 const VERDICT_SYSTEM_PROMPT = `You are an expert fact-checker. You will be given a set of claims with evidence gathered from multiple sources. Your job is to evaluate each claim, assess the evidence, and deliver a structured verdict.

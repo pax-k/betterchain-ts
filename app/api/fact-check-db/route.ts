@@ -97,8 +97,17 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { mode, input, verdict, authorInfo, domainAnalysis, trackerAnalysis } =
-    body;
+  const {
+    mode,
+    input,
+    verdict,
+    authorInfo,
+    domainAnalysis,
+    trackerAnalysis,
+    imageHistory,
+    aiTextDetection,
+    perspectives,
+  } = body;
 
   if (!mode || !input || !verdict) {
     return NextResponse.json(
@@ -116,6 +125,9 @@ export async function POST(req: Request) {
     authorInfo: authorInfo ?? null,
     domainAnalysis: domainAnalysis ?? null,
     trackerAnalysis: trackerAnalysis ?? null,
+    imageHistory: imageHistory ?? null,
+    aiTextDetection: aiTextDetection ?? null,
+    perspectives: perspectives ?? null,
     createdAt: new Date().toISOString(),
     viewCount: 0,
   };

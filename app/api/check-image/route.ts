@@ -1,6 +1,7 @@
 import { createSSEStream } from "@/lib/stream";
 import { analyzeImage, synthesizeVerdict } from "@/lib/anthropic";
 import { reverseImageSearch } from "@/lib/serpapi";
+import { searchImageHistory } from "@/lib/tineye";
 import { searchClaim } from "@/lib/tavily";
 import { searchFactChecks } from "@/lib/google-factcheck";
 import { Evidence, StreamEvent } from "@/lib/types";
@@ -15,14 +16,24 @@ export async function POST(req: Request) {
   return createSSEStream(async function* (): AsyncGenerator<StreamEvent> {
     yield { type: "progress", step: "Analyzing image..." };
 
-    // Run all three tracks in parallel
-    const [imageAnalysis, reverseResults] = await Promise.all([
+    // Run all tracks in parallel
+    const [imageAnalysis, reverseResults, imageHistory] = await Promise.all([
       analyzeImage(imageUrl),
       reverseImageSearch(imageUrl).catch(() => ({
         matchingPages: [],
         similarImages: [],
       })),
+      searchImageHistory(imageUrl).catch(() => ({
+        firstSeen: null,
+        totalResults: 0,
+        matches: [],
+      })),
     ]);
+
+    // Report image history
+    if (imageHistory.totalResults > 0) {
+      yield { type: "imageHistory", data: imageHistory };
+    }
 
     // Report AI detection results
     yield {

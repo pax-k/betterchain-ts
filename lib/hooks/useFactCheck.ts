@@ -7,6 +7,9 @@ import type {
   AuthorInfo,
   DomainAnalysis,
   TrackerAnalysis,
+  ImageHistory,
+  AITextDetection,
+  PerspectiveGroup,
 } from "@/lib/types";
 
 type FactCheckMode = "url" | "image" | "text" | "pdf";
@@ -45,6 +48,12 @@ export function useFactCheck() {
     useState<DomainAnalysis | null>(null);
   const [trackerAnalysis, setTrackerAnalysis] =
     useState<TrackerAnalysis | null>(null);
+  const [imageHistory, setImageHistory] = useState<ImageHistory | null>(null);
+  const [aiTextDetection, setAITextDetection] =
+    useState<AITextDetection | null>(null);
+  const [perspectives, setPerspectives] = useState<PerspectiveGroup[] | null>(
+    null
+  );
 
   const reset = useCallback(() => {
     setIsLoading(false);
@@ -56,6 +65,9 @@ export function useFactCheck() {
     setAuthorInfo(null);
     setDomainAnalysis(null);
     setTrackerAnalysis(null);
+    setImageHistory(null);
+    setAITextDetection(null);
+    setPerspectives(null);
   }, []);
 
   const submit = useCallback(
@@ -69,12 +81,18 @@ export function useFactCheck() {
       setAuthorInfo(null);
       setDomainAnalysis(null);
       setTrackerAnalysis(null);
+      setImageHistory(null);
+      setAITextDetection(null);
+      setPerspectives(null);
 
       // Local accumulators for auto-save (state setters are async)
       let receivedVerdict: Verdict | null = null;
       let receivedAuthor: AuthorInfo | null = null;
       let receivedDomain: DomainAnalysis | null = null;
       let receivedTrackers: TrackerAnalysis | null = null;
+      let receivedImageHistory: ImageHistory | null = null;
+      let receivedAITextDetection: AITextDetection | null = null;
+      let receivedPerspectives: PerspectiveGroup[] | null = null;
 
       try {
         const response = await fetch(`/api/check-${mode}`, {
@@ -158,6 +176,18 @@ export function useFactCheck() {
                   receivedTrackers = event.data;
                   setTrackerAnalysis(event.data);
                   break;
+                case "imageHistory":
+                  receivedImageHistory = event.data;
+                  setImageHistory(event.data);
+                  break;
+                case "aiTextDetection":
+                  receivedAITextDetection = event.data;
+                  setAITextDetection(event.data);
+                  break;
+                case "perspectives":
+                  receivedPerspectives = event.data;
+                  setPerspectives(event.data);
+                  break;
               }
             } catch {
               // Skip malformed JSON lines
@@ -177,6 +207,9 @@ export function useFactCheck() {
               authorInfo: receivedAuthor,
               domainAnalysis: receivedDomain,
               trackerAnalysis: receivedTrackers,
+              imageHistory: receivedImageHistory,
+              aiTextDetection: receivedAITextDetection,
+              perspectives: receivedPerspectives,
             }),
           }).catch(() => {});
         }
@@ -199,6 +232,9 @@ export function useFactCheck() {
     authorInfo,
     domainAnalysis,
     trackerAnalysis,
+    imageHistory,
+    aiTextDetection,
+    perspectives,
     submit,
     reset,
   };

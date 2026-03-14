@@ -11,6 +11,9 @@ import { EvidenceList } from "@/components/EvidenceList";
 import { DomainCard } from "@/components/DomainCard";
 import { AuthorCard } from "@/components/AuthorCard";
 import { TrackerCard } from "@/components/TrackerCard";
+import { ImageHistoryCard } from "@/components/ImageHistoryCard";
+import { AITextDetectionCard } from "@/components/AITextDetectionCard";
+import { PerspectiveCard } from "@/components/PerspectiveCard";
 
 const modeColors: Record<string, string> = {
   text: "bg-blue-100 text-blue-800",
@@ -100,8 +103,17 @@ export default function HistoryDetailPage() {
       {/* Source analysis cards */}
       {result.domainAnalysis && <DomainCard domain={result.domainAnalysis} />}
       {result.authorInfo && <AuthorCard author={result.authorInfo} />}
+      {result.imageHistory && (
+        <ImageHistoryCard history={result.imageHistory} />
+      )}
+      {result.aiTextDetection && (
+        <AITextDetectionCard detection={result.aiTextDetection} />
+      )}
       {result.trackerAnalysis && (
         <TrackerCard trackers={result.trackerAnalysis} />
+      )}
+      {result.perspectives && result.perspectives.length > 0 && (
+        <PerspectiveCard perspectives={result.perspectives} />
       )}
 
       {/* Verdict + Evidence */}

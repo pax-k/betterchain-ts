@@ -1,11 +1,14 @@
 import { createSSEStream } from "@/lib/stream";
 import {
+  detectAIText,
   extractClaims,
+  groupByPerspective,
   webSearchFactCheck,
   synthesizeVerdict,
 } from "@/lib/anthropic";
 import { searchFactChecks } from "@/lib/google-factcheck";
-import { Evidence, StreamEvent } from "@/lib/types";
+import { getDomainLeanings } from "@/lib/domain-authority";
+import { Evidence, EvidenceResult, StreamEvent } from "@/lib/types";
 
 export async function POST(req: Request) {
   const { text } = await req.json();
@@ -22,9 +25,17 @@ export async function POST(req: Request) {
   }
 
   return createSSEStream(async function* (): AsyncGenerator<StreamEvent> {
-    yield { type: "progress", step: "Extracting claims from text..." };
+    yield { type: "progress", step: "Analyzing text..." };
 
-    const claims = await extractClaims(text);
+    // Run AI detection and claim extraction in parallel
+    const [aiDetection, claims] = await Promise.all([
+      detectAIText(text).catch(() => null),
+      extractClaims(text),
+    ]);
+
+    if (aiDetection) {
+      yield { type: "aiTextDetection", data: aiDetection };
+    }
 
     if (claims.length === 0) {
       yield {
@@ -77,6 +88,18 @@ export async function POST(req: Request) {
         })),
         factCheckResults: factChecks,
       });
+    }
+
+    // Group evidence by political perspective
+    const allSearchResults: EvidenceResult[] = evidenceList.flatMap(
+      (e) => e.searchResults
+    );
+    const perspectives = groupByPerspective(
+      allSearchResults,
+      getDomainLeanings()
+    );
+    if (perspectives.some((p) => p.sources.length > 0)) {
+      yield { type: "perspectives", data: perspectives };
     }
 
     yield { type: "progress", step: "Synthesizing verdict..." };
