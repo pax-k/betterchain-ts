@@ -90,6 +90,59 @@ describe("fact-check-db API", () => {
       expect(data.authorInfo).toBeNull();
       expect(data.domainAnalysis).toBeNull();
       expect(data.trackerAnalysis).toBeNull();
+      expect(data.imageHistory).toBeNull();
+      expect(data.aiTextDetection).toBeNull();
+      expect(data.perspectives).toBeNull();
+    });
+
+    it("stores imageHistory, aiTextDetection, and perspectives when provided", async () => {
+      const imageHistory = {
+        firstSeen: "2023-01-01",
+        totalResults: 5,
+        matches: [{ domain: "example.com", url: "https://example.com/img" }],
+      };
+      const aiTextDetection = {
+        isLikelyAIGenerated: true,
+        confidence: 85,
+        indicators: ["Repetitive phrasing"],
+        summary: "Likely AI-generated text.",
+      };
+      const perspectives = [
+        {
+          leaning: "left",
+          sources: [
+            { title: "Left Source", url: "https://left.com", snippet: "s", domain: "left.com" },
+          ],
+        },
+      ];
+
+      const data = await postEntry(POST, {
+        imageHistory,
+        aiTextDetection,
+        perspectives,
+      });
+
+      expect(data.imageHistory).toEqual(imageHistory);
+      expect(data.aiTextDetection).toEqual(aiTextDetection);
+      expect(data.perspectives).toEqual(perspectives);
+    });
+
+    it("returns new fields via GET", async () => {
+      const aiTextDetection = {
+        isLikelyAIGenerated: false,
+        confidence: 20,
+        indicators: [],
+        summary: "Human-written.",
+      };
+      const entry = await postEntry(POST, { aiTextDetection });
+
+      const res = await GET(
+        createRequest(`/api/fact-check-db?id=${entry.id}`)
+      );
+      const data = await res.json();
+      expect(data.aiTextDetection).toEqual(aiTextDetection);
+      expect(data.imageHistory).toBeNull();
+      expect(data.perspectives).toBeNull();
     });
   });
 
