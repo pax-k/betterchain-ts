@@ -186,7 +186,7 @@ Fact-checking automation is inherently imperfect. Here is an honest assessment.
 - **Search quality dependency** — verdict quality is directly bounded by what Tavily and Claude's web search return; if the relevant counter-evidence doesn't appear in search results, it won't factor into the verdict
 - **No primary source verification** — the system cannot contact original sources, verify documents, or conduct interviews; it only synthesizes existing web content
 - **Prompt sensitivity** — different phrasings of the same claim can produce different verdicts, especially for nuanced or context-dependent statements
-- **Domain database limitations** — the known-domain trust database covers ~40 major sources; thousands of legitimate (and illegitimate) sources are scored heuristically rather than from curated data
+- **Domain database limitations** — the known-domain trust database covers 150+ sources; thousands of legitimate (and illegitimate) sources are still scored heuristically rather than from curated data
 - **No image forensics** — image analysis relies on Claude's vision model for AI-generation detection, not forensic tools like ELA (Error Level Analysis) or metadata inspection
 - **In-memory persistence** — the history store resets on server restart; no durable storage means no long-term data for accuracy auditing
 
