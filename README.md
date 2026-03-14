@@ -10,6 +10,10 @@ A full-stack web application that verifies claims, articles, images, and PDFs us
 - **Multiple verification sources** — Claude web search, Tavily, Google Fact Check API, SerpAPI reverse image search
 - **Structured verdicts** — TRUE / FALSE / MISLEADING / PARTIALLY_TRUE / UNVERIFIED with confidence scores
 - **Searchable history** — filterable, sortable, paginated archive of all past fact-checks with view counting
+- **AI text detection** — analyzes submitted text for signs of AI generation (hedging language, uniform structure, generic transitions)
+- **Image history search** — finds where an image has previously appeared online via Google Lens, with domain list and first-seen dates
+- **Multi-perspective view** — groups evidence sources by political leaning (left / center / right) based on a 150+ source bias database
+- **Expanded bias database** — 150+ domains with MBFC-style bias ratings covering international press, fact-checkers, science journals, and misinformation sites
 - **File uploads** — images and PDFs stored via Vercel Blob
 
 ## Tech Stack
@@ -53,18 +57,23 @@ components/
   DomainCard.tsx               Domain authority + trust indicators
   AuthorCard.tsx               Author credibility scoring
   TrackerCard.tsx              Tracker/ad network detection display
+  AITextDetectionCard.tsx      AI-generated text detection display
+  ImageHistoryCard.tsx         Image history / prior appearances display
+  PerspectiveCard.tsx          Multi-perspective evidence grouping (left/center/right)
   HistoryTable.tsx             Paginated results table
   NavHeader.tsx                Top navigation bar
   ui/                          Base UI components (badge, button, card, etc.)
 
 lib/
   anthropic.ts                 Claude API: claim extraction, image analysis,
-                               web search, author assessment, verdict synthesis
+                               web search, author assessment, AI text detection,
+                               perspective grouping, verdict synthesis
   firecrawl.ts                 URL scraping (markdown + raw HTML)
   tavily.ts                    Web search for claim verification
   google-factcheck.ts          Google Fact Check Tools API
   serpapi.ts                   Reverse image search
-  domain-authority.ts          Domain trust scoring (40+ known sources, RDAP)
+  domain-authority.ts          Domain trust scoring (150+ known sources, RDAP)
+  tineye.ts                    Image history search via Google Lens/SerpAPI
   author.ts                    Author credential verification
   tracker-analysis.ts          80+ tracker/ad domain detection from HTML
   pdf.ts                       PDF text extraction
@@ -85,16 +94,21 @@ User Input (text / URL / image / PDF)
 /api/check-{mode}
     |
     +---> Extract claims (Claude)
-    +---> Scrape content (Firecrawl, for URLs)
-    +---> Analyze domain (known DB + RDAP + reputation search)
+    +---> Detect AI-generated text (Claude, text mode)
+    +---> Scrape content (Firecrawl, URL mode)
+    +---> Analyze domain (150+ source DB + RDAP + reputation)
     +---> Verify author (Tavily + Claude)
     +---> Detect trackers (HTML regex matching)
+    +---> Image history search (Google Lens, image mode)
     |
     v
 Per-claim verification (parallel)
     +---> Web search (Claude web_search tool)
     +---> Tavily advanced search
     +---> Google Fact Check API
+    |
+    v
+Group evidence by perspective (left / center / right)
     |
     v
 Synthesize verdict (Claude structured output)
