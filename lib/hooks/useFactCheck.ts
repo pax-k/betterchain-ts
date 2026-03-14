@@ -17,7 +17,7 @@ type ClaimInfo = {
   evidenceSources: string[];
 };
 
-function extractInput(
+export function extractInput(
   mode: FactCheckMode,
   payload: Record<string, unknown>
 ): string {
